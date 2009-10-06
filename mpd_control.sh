@@ -98,7 +98,7 @@ case $1 in
 	
 	TITLE=$(mpc playlist | $DMENU);
 	if [ "$TITLE" = "" ]; then exit; fi
-	POS=$(echo "$TITLE" | awk '{print $1}' | sed 's/)//');
+	POS=$(echo "$TITLE" | awk '{print $1}' | sed 's/)//' | sed 's/>//');
 	mpc play $POS;
 	;;
 	
