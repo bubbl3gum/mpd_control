@@ -69,6 +69,7 @@ case $1 in
 	;;
 
 	-t|--track)
+		
 		CURRENT=$(mpc | sed -n '2,2p' | tr -s " "  | cut -d " "  -f 2 | cut -d "#" -f 2 | cut -d "/" -f 1)
 		
 		TITLE=$(mpc list title | sort -f | $DMENU | head -n 1)
@@ -78,7 +79,7 @@ case $1 in
 		mpc add "$SONG";
 		LAST=$(mpc | sed -n '2,2p' | tr -s " "  | cut -d " "  -f 2 | cut -d / -f 2)
 		if [ "$LAST" = "" ]; then mpc play;
-		else mpc move $LAST $((CURRENT+1)) && mpc next
+		else mpc move $LAST $((CURRENT+1)) && mpc play $((CURRENT+1))
 		fi 
 	
 	;;
