@@ -1,12 +1,72 @@
 #!/bin/bash
 
+#when set to exit, mpd_control will exit if you press escape
+#when set to break, mpd_control will go the upper level if possible
+ESC_ACTION="break"
 # source configuration file for dmenu if exists
+
 if [ -f $HOME/.dmenurc ]; then
   . $HOME/.dmenurc
 else
   DMENU='dmenu -i'
 fi
 
+addaftercurrent(){
+	
+	#playlist is empty, just add the song
+	if [ "$(mpc playlist | wc -l)" == "0" ]; then
+		mpc add "$1" 
+
+	#there is no current song so mpd is stopped
+	#it seems to be impossible to determine the current songs' position when 
+	#mpd is stopped, so just add to the end
+	elif [ -z "$(mpc current)" ]; then 
+		mpc play
+		CUR_POS=$(mpc | tail -2 | head -1 | awk '{print $2}' | sed 's/#//' | awk -F/ '{print $1}')
+		END_POS=$(mpc playlist | wc -l)
+		mpc add "$1"
+		mpc move $(($END_POS+1)) $(($CUR_POS+1))	
+		mpc stop
+
+	#at least 1 song is in the playlist, determine the position of the 
+	#currently played song and add $1 after it
+	else
+
+		CUR_POS=$(mpc | tail -2 | head -1 | awk '{print $2}' | sed 's/#//' | awk -F/ '{print $1}')
+		END_POS=$(mpc playlist | wc -l)
+		mpc add "$1"
+		mpc move $(($END_POS+1)) $(($CUR_POS+1))	
+	fi
+}
+addaftercurrentandplay(){
+
+	#playlist is empty, just add the song
+	if [ "$(mpc playlist | wc -l)" == "0" ]; then
+		mpc add "$1" 
+		mpc play
+
+	#there is no current song so mpd is stopped
+	#it seems to be impossible to determine the current songs' position when 
+	#mpd is stopped, so just add to the end
+	elif [ -z "$(mpc current)" ]; then 
+		mpc play
+		CUR_POS=$(mpc | tail -2 | head -1 | awk '{print $2}' | sed 's/#//' | awk -F/ '{print $1}')
+		END_POS=$(mpc playlist | wc -l)
+		mpc add "$1"
+		mpc move $(($END_POS+1)) $(($CUR_POS+1))	
+		mpc next
+
+	#at least 1 song is in the playlist, determine the position of the 
+	#currently played song and add $1 after it
+	else
+
+		CUR_POS=$(mpc | tail -2 | head -1 | awk '{print $2}' | sed 's/#//' | awk -F/ '{print $1}')
+		END_POS=$(mpc playlist | wc -l)
+		mpc add "$1"
+		mpc move $(($END_POS+1)) $(($CUR_POS+1))	
+		mpc next
+	fi
+}
 
 case $1 in
 	
@@ -15,98 +75,108 @@ case $1 in
 	while true; do
 
 		ARTIST="$(mpc list artist | sort -f | $DMENU)";
-		if [ "$ARTIST" = "" ]; then break; fi
+		if [ "$ARTIST" = "" ]; then $ESC_ACTION; fi
 		
 		while true; do
 
-			ALBUMS=$(mpc list album artist "$ARTIST");
+			ALBUMS=$(mpc list album artist "$ARTIST" | sort -f);
 			ALBUM=$(echo -e "replace all\nadd all\n--------------------------\n$ALBUMS" | $DMENU);
-			if [ "$ALBUM" = "" ]; then break;
+			if [ "$ALBUM" = "" ]; then $ESC_ACTION;
 			
-			elif [ "$ALBUM" = "replace all" ]; then mpc clear && mpc list filename artist "$ARTIST" | mpc add && mpc play && exit;
-			elif [ "$ALBUM" = "add all" ]; then mpc list filename artist "$ARTIST" | mpc add && mpc play && exit;
+			elif [ "$ALBUM" = "replace all" ]; then
+				CUR_SONG=$(mpc current)
+				mpc clear
+				mpc find artist "$ARTIST" | mpc add 
+				if [ -n "$CUR_SONG" ]; then mpc play; fi
+				$ESC_ACTION
+			elif [ "$ALBUM" = "add all" ]; then 
+				mpc find artist "$ARTIST" | mpc add
+				$ESC_ACTION
 			fi
 			
 			while true; do
 				
 				TITLES=$(mpc list title artist "$ARTIST" album "$ALBUM")
 				TITLE=$(echo -e "replace all\nadd all\n--------------------------\n$TITLES" | $DMENU);
-				if [ "$TITLE" = "" ]; then break; fi
-				if [ "$TITLE" = "replace all" ]; then
+				if [ "$TITLE" = "" ]; then $ESC_ACTION
+				elif [ "$TITLE" = "replace all" ]; then
+					CUR_SONG=$(mpc current)
 					mpc clear;
-					mpc list filename artist "$ARTIST" album "$ALBUM" | mpc add; 
+					mpc find artist "$ARTIST" album "$ALBUM" | mpc add 
+					if [ -n "$CUR_SONG" ]; then mpc play; fi
+					$ESC_ACTION
 				elif [ "$TITLE" = "add all" ]; then
-					mpc list filename artist "$ARTIST" album "$ALBUM" | mpc add; 
+					mpc find artist "$ARTIST" album "$ALBUM" | mpc add 
+					$ESC_ACTION
 				
-				else
-				while true; do
-					DEC=$(echo -e "replace\nadd" | $DMENU);
-					if [ "$DEC" = "" ]; then break; fi
-					if [ "$DEC" = "replace" ]; then
-						mpc clear;
-					fi
-				
-					mpc list filename artist "$ARTIST" album "$ALBUM" title "$TITLE"| mpc add; 
-					mpc play;
-					exit;	
-
-					
-
-				done
 				fi
 
+				while true; do
+					DEC=$(echo -e "add after current and play\nadd after current\nreplace\nadd at the end" | $DMENU);
+					case $DEC in 
 
+						"")
+						$ESC_ACTION
+						;;
 
+						"add after current and play")
+						addaftercurrentandplay "$(mpc find artist "$ARTIST" album "$ALBUM" title "$TITLE")"
+						;;
+
+						"add after current")
+						addaftercurrent "$(mpc find artist "$ARTIST" album "$ALBUM" title "$TITLE")"
+						;;
+
+						"replace")
+						CUR_SONG=$(mpc current)
+						mpc clear
+						mpc find artist "$ARTIST" album "$ALBUM" title "$TITLE" | mpc add
+						if [ -n "$CUR_SONG" ]; then mpc play; fi
+						;;
+						
+						"add at the end")
+						mpc find artist "$ARTIST" album "$ALBUM" title "$TITLE" | mpc add
+						;;
+
+					esac
+					$ESC_ACTION
+				done
 			done
-			
-
-
 		done
-		
-		
-	
 	done
 	;;
 
 	-t|--track)
 		
-		CURRENT=$(mpc | sed -n '2,2p' | tr -s " "  | cut -d " "  -f 2 | cut -d "#" -f 2 | cut -d "/" -f 1)
-		
-		TITLE=$(mpc list title | sort -f | $DMENU | head -n 1)
-		if [ "$TITLE" = "" ]; then exit; fi
-		
-		SONG=$(mpc list filename title "$TITLE") 
-		mpc add "$SONG";
-		LAST=$(mpc | sed -n '2,2p' | tr -s " "  | cut -d " "  -f 2 | cut -d / -f 2)
-		if [ "$LAST" = "" ]; then mpc play;
-		else mpc move $LAST $((CURRENT+1)) && mpc play $((CURRENT+1))
-		fi 
+	TITLE=$(mpc list title | sort -f | $DMENU)
+	if [ "$TITLE" = "" ]; then exit; fi
 	
+	SONG=$(mpc find title "$TITLE" | head -1) 
+	addaftercurrentandplay "$SONG"
 	;;
 
 	-p|--playlist)
 	PLAYLIST=$(mpc lsplaylists | $DMENU);
 	if [ "$PLAYLIST" = "" ]; then exit; fi
+	CUR_SONG=$(mpc current)
 	mpc clear
 	mpc load "$PLAYLIST";
-	mpc play 
-	#`mpc | sed -n '2,2p' | tr -s " " | cut -d " " -f 2 | cut -d "/" -f 2`
-
+	if [ -n "$CUR_SONG" ]; then mpc play; fi
 	;;
 
 	-j|--jump)
 	
 	TITLE=$(mpc playlist | $DMENU);
 	if [ "$TITLE" = "" ]; then exit; fi
-	POS=$(echo "$TITLE" | awk '{print $1}' | sed 's/)//' | sed 's/>//');
+	POS=$(mpc playlist | grep -n "$TITLE" | awk -F: '{print $1}')
 	mpc play $POS;
 	;;
-	
+
 	-h|--help)
-	echo -e "-a, --artist\tsearch for artist, then album, then title"
-    echo -e "-t, --track\tsearch for a single track in the whole database"
-	echo -e "-p, --playlist\tsearch for a playlist play it"
-	echo -e "-j, --jump\tjump to another song in the current playlist"		 
+	echo -e "-a, --artist 	  search for artist, then album, then title"
+    echo -e "-t, --track 	  search for a single track in the whole database"
+	echo -e "-p, --playlist   search for a playlist load it"
+	echo -e "-j, --jump       jump to another song in the current playlist"		 
 	
 	
 	
