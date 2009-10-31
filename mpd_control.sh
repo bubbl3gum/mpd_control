@@ -120,22 +120,22 @@ case $1 in
 						;;
 
 						"add after current and play")
-						addaftercurrentandplay "$(mpc find artist "$ARTIST" album "$ALBUM" title "$TITLE")"
+						addaftercurrentandplay "$(mpc find artist "$ARTIST" album "$ALBUM" title "$TITLE" | head -1 )"
 						;;
 
 						"add after current")
-						addaftercurrent "$(mpc find artist "$ARTIST" album "$ALBUM" title "$TITLE")"
+						addaftercurrent "$(mpc find artist "$ARTIST" album "$ALBUM" title "$TITLE" | head -1 )"
 						;;
 
 						"replace")
 						CUR_SONG=$(mpc current)
 						mpc clear
-						mpc find artist "$ARTIST" album "$ALBUM" title "$TITLE" | mpc add
+						mpc find artist "$ARTIST" album "$ALBUM" title "$TITLE" | head -1 | mpc add
 						if [ -n "$CUR_SONG" ]; then mpc play; fi
 						;;
 						
 						"add at the end")
-						mpc find artist "$ARTIST" album "$ALBUM" title "$TITLE" | mpc add
+						mpc find artist "$ARTIST" album "$ALBUM" title "$TITLE" | head -1 | mpc add
 						;;
 
 					esac
