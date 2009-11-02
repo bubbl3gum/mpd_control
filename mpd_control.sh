@@ -54,7 +54,7 @@ addaftercurrentandplay(){
 		END_POS=$(mpc playlist | wc -l)
 		mpc add "$1"
 		mpc move $(($END_POS+1)) $(($CUR_POS+1))	
-		mpc next
+		mpc play $(($CUR_POS+1))
 
 	#at least 1 song is in the playlist, determine the position of the 
 	#currently played song and add $1 after it
@@ -64,7 +64,7 @@ addaftercurrentandplay(){
 		END_POS=$(mpc playlist | wc -l)
 		mpc add "$1"
 		mpc move $(($END_POS+1)) $(($CUR_POS+1))	
-		mpc next
+		mpc play $(($CUR_POS+1))
 	fi
 }
 
