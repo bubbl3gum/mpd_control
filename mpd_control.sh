@@ -235,8 +235,8 @@ case $1 in
 	echo -e "-a, --artist		search for artist, then album, then title"
     echo -e "-t, --track		search for a single track in the whole database"
 	echo -e "-p, --playlist		search for a playlist load it"
-	echo -e "-j, --jump			jump to another song in the current playlist"		 
-	echo -e "-l, --longplayer	jump to another song in the current playlist"		 
+	echo -e "-j, --jump		jump to another song in the current playlist"		 
+	echo -e "-l, --longplayer	search for album, then title"
 	
 	
 	
