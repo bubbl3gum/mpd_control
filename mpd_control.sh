@@ -172,11 +172,71 @@ case $1 in
 	mpc play $POS;
 	;;
 
+	-l|--longplayer)
+	
+	while true; do
+
+		ALBUM=$(mpc list album | sort -f | $DMENU);
+		if [ "$ALBUM" = "" ]; then $ESC_ACTION;
+		fi
+		
+		while true; do
+			
+			TITLES=$(mpc list title album "$ALBUM")
+			TITLE=$(echo -e "replace all\nadd all\n--------------------------\n$TITLES" | $DMENU);
+			if [ "$TITLE" = "" ]; then $ESC_ACTION
+			elif [ "$TITLE" = "replace all" ]; then
+				CUR_SONG=$(mpc current)
+				mpc clear;
+				mpc find album "$ALBUM" | mpc add 
+				if [ -n "$CUR_SONG" ]; then mpc play; fi
+				$ESC_ACTION
+			elif [ "$TITLE" = "add all" ]; then
+				mpc find album "$ALBUM" | mpc add 
+				$ESC_ACTION
+			
+			fi
+
+			while true; do
+				DEC=$(echo -e "add after current and play\nadd after current\nreplace\nadd at the end" | $DMENU);
+				case $DEC in 
+
+					"")
+					$ESC_ACTION
+					;;
+
+					"add after current and play")
+					addaftercurrentandplay "$(mpc find album "$ALBUM" title "$TITLE" | head -1 )"
+					;;
+
+					"add after current")
+					addaftercurrent "$(mpc find album "$ALBUM" title "$TITLE" | head -1 )"
+					;;
+
+					"replace")
+					CUR_SONG=$(mpc current)
+					mpc clear
+					mpc find album "$ALBUM" title "$TITLE" | head -1 | mpc add
+					if [ -n "$CUR_SONG" ]; then mpc play; fi
+					;;
+					
+					"add at the end")
+					mpc find album "$ALBUM" title "$TITLE" | head -1 | mpc add
+					;;
+
+				esac
+				$ESC_ACTION
+			done
+		done
+	done
+	;;
+
 	-h|--help)
-	echo -e "-a, --artist 	  search for artist, then album, then title"
-    echo -e "-t, --track 	  search for a single track in the whole database"
-	echo -e "-p, --playlist   search for a playlist load it"
-	echo -e "-j, --jump       jump to another song in the current playlist"		 
+	echo -e "-a, --artist		search for artist, then album, then title"
+    echo -e "-t, --track		search for a single track in the whole database"
+	echo -e "-p, --playlist		search for a playlist load it"
+	echo -e "-j, --jump			jump to another song in the current playlist"		 
+	echo -e "-l, --longplayer	jump to another song in the current playlist"		 
 	
 	
 	
